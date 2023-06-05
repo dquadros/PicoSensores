@@ -1,0 +1,88 @@
+;
+; Protocolo DHT para o livro 'Usando Sensores com a Raspberry Pi Pico'
+; Copyright (c) 2023, Daniel Quadros
+;
+
+.program dht
+
+    //espera ser disparado pelo programa
+    pull
+     
+    //  mantem o dado baixo pelo tempo especificado
+    set  pindirs, 1      // muda pino para saida
+    set  pins, 0         // coloca o pino no nivel baixo
+    mov  x, osr
+waitx:
+    nop  [25] 
+    jmp  x--, waitx      // espera por count*26/clock
+      
+    // inicia leitura da resposta
+    set  pindirs, 0      // muda pino para entrada
+    wait 1 pin 0         // espera voltar ao nivel alto
+    wait 0 pin 0         // espera pulso inicial
+    wait 1 pin 0 
+    wait 0 pin 0         // espera inicio do primeiro bit
+ 
+    // le os bits de dados
+readdata:
+    wait 1 pin 0         // espera dado alto
+    set  x, 20           // x eh o timeout
+countdown:
+    jmp pin, continue    // continua contando se dado alto
+     
+    // pino baixo enquanto contava -> bit 0
+    set  y, 0                 
+    in   y, 1            // coloca um 0 no resultado
+    jmp  readdata        // ler proximo bit
+     
+    // pino continua alto
+continue:
+    jmp x--, countdown   // decrementa contagem
+ 
+    // timeout -> bit 1
+    set  y, 1                  
+    in   y, 1            // coloca um 1 no resultado
+    wait 0 pin 0         // espera nivel baixo
+    jmp  readdata        // ler proximo bit
+
+
+% c-sdk {
+// Funcao auxiliar para configurar a maquina de estado
+static inline void dht_program_init(PIO pio, uint sm, uint offset, 
+    uint dataPin) {
+
+    // Obtem estrutura config
+    pio_sm_config c = dht_program_get_default_config(offset);
+
+    // Mapeia os pinos
+    sm_config_set_set_pins(&c, dataPin, 1);
+    sm_config_set_in_pins(&c, dataPin);
+    sm_config_set_jmp_pin(&c, dataPin);
+    
+    // Acerta a direcao dos pinos
+    pio_sm_set_consecutive_pindirs(pio, sm, dataPin, 1, true);
+
+    // Liga pull-up no pino de dados
+    gpio_pull_up(dataPin);
+    
+    // Garante dado em nivel alto no inicio
+    pio_sm_set_pins_with_mask(pio, sm, 1 << dataPin, 1);
+
+    // Seleciona a funcao do pino (PIO)
+    pio_gpio_init(pio, dataPin);
+    
+    // Configura as FIFOs
+    sm_config_set_in_shift (&c, false, true, 8);
+    sm_config_set_out_shift (&c, true, false, 1);
+
+    // Configura o clock para 1.4 MHz
+    float div = clock_get_hz(clk_sys) / 1400000;
+    sm_config_set_clkdiv(&c, div);
+
+    // Carrega nossa configuracao e vai para o comeco
+    pio_sm_init(pio, sm, offset, &c);
+    
+    // Coloca a maquina de estados para rodar
+    pio_sm_set_enabled(pio, sm, true);
+}
+%}
