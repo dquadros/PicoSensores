@@ -6,8 +6,8 @@ Os exemplos estão disponíveis para quatro ambientes de programação:
 
 
 * SDK C/C++ oficial. Os exemplos foram testados com o SDK versão 1.5.0
-* IDE Arduino, como o suporte não oficial desenvolvido por Earle F. Philhower, III. Os exemplos foram testados com a IDE v2.0.4 e Raspberry Pi Pico/RP2040 v3.1.0.
-* MicroPython. Os exemplos foram testados com a versão 1.19.1.
+* IDE Arduino, como o suporte não oficial desenvolvido por Earle F. Philhower, III. Os exemplos foram testados com a IDE v2.1.0 e Raspberry Pi Pico/RP2040 v3.2.3.
+* MicroPython. Os exemplos foram testados com a versão 1.20.0.
 * CircuitPython. Os exemplos foram testados com a versão 8.0.5.
 
 Mais informações sobre estes ambientes podem ser encontradas no livro.

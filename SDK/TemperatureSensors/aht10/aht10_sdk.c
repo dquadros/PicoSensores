@@ -1,7 +1,7 @@
 /**
  * @file aht10_sdk.c
  * @author Daniel Quadros (dqsoft.blogspot@gmail.com)
- * @brief Exemplo com Sensor de Temperatura HDC1080
+ * @brief Exemplo com Sensor de Temperatura AHT10
  * @version 1.0
  * @date 2023-06-05
  * 

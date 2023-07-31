@@ -1,0 +1,74 @@
+;
+; Interface com o sensor HC-SR04
+; para o livro 'Usando Sensores com a Raspberry Pi Pico'
+; Copyright (c) 2023, Daniel Quadros
+;
+
+.program hcsr04
+
+.wrap_target
+
+    // espera solicitacao e salva o timeout
+    pull
+    mov  x,osr
+     
+    // envia um pulso de 10 us (20 ciclos)
+    set  pins, 1 [19]
+    set  pins, 0
+
+    // espera inicio do pulso de eco
+    wait 1 pin 0
+
+    // espera o fim do pulso de eco
+    // decrementa X cada 2 ciclos (1us)
+dowait:
+    jmp  pin, continue
+    jmp  end
+continue:
+    jmp  x--, dowait
+      
+    // retorna a duracao do pulso
+end:
+    mov  isr,x
+    push
+.wrap
+
+% c-sdk {
+// Helper function to set a state machine to run our PIO program
+static inline void hcsr04_program_init(PIO pio, uint sm, uint offset, 
+    uint triggerPin, uint echoPin) {
+
+    // Obtem estrutura config inicializada
+    pio_sm_config c = hcsr04_program_get_default_config(offset);
+
+    // Mapeia os pinos na maquina de estados
+    sm_config_set_set_pins(&c, triggerPin, 1);
+    sm_config_set_in_pins(&c, echoPin);
+    sm_config_set_jmp_pin(&c, echoPin);
+    
+    // Configura a direcao dos pinos
+    pio_sm_set_consecutive_pindirs(pio, sm, triggerPin, 1, true);
+    pio_sm_set_consecutive_pindirs(pio, sm, echoPin, 1, false);
+
+    // Garante trigger baixo
+    pio_sm_set_pins_with_mask(pio, sm, 1 << triggerPin, 0);
+
+    // Conecta a PIO aos pinos 
+    pio_gpio_init(pio, triggerPin);
+    pio_gpio_init(pio, echoPin);
+    
+    // Configura as filas
+    sm_config_set_in_shift (&c, true, false, 1);
+    sm_config_set_out_shift (&c, true, false, 1);
+
+    // Configura o clock para 2 MHz
+    float div = clock_get_hz(clk_sys) / 2000000;
+    sm_config_set_clkdiv(&c, div);
+
+    // Carrega a configuracao e vai para o inicio do programa
+    pio_sm_init(pio, sm, offset, &c);
+    
+    // Coloca a maquina de estados para rodar
+    pio_sm_set_enabled(pio, sm, true);
+}
+%}
